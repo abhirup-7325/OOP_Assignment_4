@@ -1,9 +1,7 @@
 /*
-Design a STRING class, which will have the initialization facility similar to array
-class. Provide support for
- Assigning one object for another,
- Two string can be concatenated using + operator,
- Two strings can be compared using the relational operators.
+Modify the STRING class so that assigning/initializing a string by another will not
+copy it physically but will keep a reference count, which will be incremented.
+Reference value 0 means the space can be released
 */
 
 
@@ -18,6 +16,9 @@ public:
 
         _str = new char[_size + 1];
         _str[_size] = '\0';
+
+        _atomicCtr = new int;
+        *_atomicCtr = 1;
     }
 
 
@@ -30,30 +31,31 @@ public:
         for (int i = 0; i < _size; i++) {
             _str[i] = s[i];
         }
+
+        _atomicCtr = new int;
+        *_atomicCtr = 1;
+    }
+
+    ~String() {
+        _deallocate();
     }
 
     String(const String& other) {
         _size = other._size;
-
-        _str = new char[_size + 1];
-        for (int i = 0; i < _size; i++) {
-            _str[i] = other._str[i];
-        }
-
-        _str[_size] = '\0';
+        _str = other._str;
+        _atomicCtr = other._atomicCtr;
+        (*_atomicCtr)++;
     }
 
     String operator=(const String& other) {
         if (this != &other) {
+            _deallocate();
+
             _size = other._size;
-            delete[] _str;
+            _str = other._str;
+            _atomicCtr = other._atomicCtr;
 
-            _str = new char[_size + 1];
-            _str[_size] = '\0';
-
-            for (int i = 0; i < _size; i++) {
-                _str[i] = other._str[i];
-            }
+            (*_atomicCtr)++;
         }
 
         return (*this);
@@ -87,24 +89,27 @@ public:
         return strcmp(_str, other._str) > 0;
     }
 
-    void print() {
-        std::cout << _str << '\n';
+    void print() const {
+        std::cout << _str << "\n";
     }
 
 private:
     int _size;
     char *_str;
+    int *_atomicCtr;
+
+    void _deallocate() {
+        (*_atomicCtr)--;
+        if (*_atomicCtr == 0) {
+            delete[] _str;
+            delete _atomicCtr;
+        }
+    }
 };
 
 
 int main() {
-    String s("Hello");
-    String t("World");
-
-    String p(10);
-    p = s + t;
-
-    p.print();
+    
 
     return 0;
 }
